@@ -179,10 +179,14 @@ static RGWRESTMgr *rest_filter(RGWRados *store, int dialect, RGWRESTMgr *orig)
 /*
  * start up the RADOS connection and then handle HTTP messages as they come in
  */
+// radosgw 可执行文件
 int radosgw_Main(int argc, const char **argv)
 {
   // dout() messages will be sent to stderr, but FCGX wants messages on stdout
+  // dout把日志输入到stderr,但是FCGX库想要把日志输入到stdout,所以这里把stderr重定向到stdout,都输出到stdout
   // Redirect stderr to stdout.
+  // FCGX -> FastCGI          https://zh.wikipedia.org/wiki/FastCGI
+  // TEMP_FAILURE_RETRY 不断重试直到返回-1或者EINTR
   TEMP_FAILURE_RETRY(close(STDERR_FILENO));
   if (TEMP_FAILURE_RETRY(dup2(STDOUT_FILENO, STDERR_FILENO)) < 0) {
     int err = errno;
@@ -199,11 +203,13 @@ int radosgw_Main(int argc, const char **argv)
   };
 
   vector<const char*> args;
+  // argv_to_vec, 在args末尾插入argv+1到argv+argc之间的数组。argv第一个参数程序名
   argv_to_vec(argc, argv, args);
   if (args.empty()) {
     cerr << argv[0] << ": -h or --help for usage" << std::endl;
     exit(1);
   }
+  // 查看参数中是否有有-h --help
   if (ceph_argparse_need_usage(args)) {
     usage();
     exit(0);
@@ -212,6 +218,7 @@ int radosgw_Main(int argc, const char **argv)
   int flags = CINIT_FLAG_UNPRIVILEGED_DAEMON_DEFAULTS;
   // Prevent global_init() from dropping permissions until frontends can bind
   // privileged ports
+  // 非特权守护进程，但是需要延迟丢弃特权，直到frontends绑定该处
   flags |= CINIT_FLAG_DEFER_DROP_PRIVILEGES;
 
   auto cct = global_init(&defaults, args, CEPH_ENTITY_TYPE_CLIENT,
