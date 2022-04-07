@@ -86,7 +86,7 @@ void RGWProcess::RGWWQ::_process(RGWRequest *req, ThreadPool::TPHandle &) {
   process->req_throttle.put(1);
   perfcounter->inc(l_rgw_qactive, -1);
 }
-
+// 带有认证的执行？？
 int rgw_process_authenticated(RGWHandler_REST * const handler,
                               RGWOp *& op,
                               RGWRequest * const req,
@@ -117,24 +117,28 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
 
   /* If necessary extract object ACL and put them into req_state. */
   ldpp_dout(op, 2) << "reading permissions" << dendl;
+// 查看bucket和租户的读权限
   ret = handler->read_permissions(op, y);
   if (ret < 0) {
     return ret;
   }
 
   ldpp_dout(op, 2) << "init op" << dendl;
+// quota
   ret = op->init_processing(y);
   if (ret < 0) {
     return ret;
   }
 
   ldpp_dout(op, 2) << "verifying op mask" << dendl;
+// 用户操作权限的判断， op_mask， 读写删除？？？
   ret = op->verify_op_mask();
   if (ret < 0) {
     return ret;
   }
 
   /* Check if OPA is used to authorize requests */
+  // Open Policy Agent (OPA), 开源通用策略引擎，github开源
   if (s->cct->_conf->rgw_use_opa_authz) {
     ret = rgw_opa_authorize(op, s);
     if (ret < 0) {
@@ -143,6 +147,7 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
   }
 
   ldpp_dout(op, 2) << "verifying op permissions" << dendl;
+// rgwop确定权限，不同操作继承RGWOp， 重载该函数
   ret = op->verify_permission(y);
   if (ret < 0) {
     if (s->system_request) {
@@ -155,6 +160,7 @@ int rgw_process_authenticated(RGWHandler_REST * const handler,
   }
 
   ldpp_dout(op, 2) << "verifying op params" << dendl;
+  // put和get附带的一些额外参数？？？
   ret = op->verify_params();
   if (ret < 0) {
     return ret;
@@ -222,6 +228,7 @@ int process_request(rgw::sal::RGWRadosStore* const store,
   int init_error = 0;
   bool should_log = false;
   RGWRESTMgr *mgr;
+  // 处理http头
   RGWHandler_REST *handler = rest->get_handler(store, s,
                                                auth_registry,
                                                frontend_prefix,

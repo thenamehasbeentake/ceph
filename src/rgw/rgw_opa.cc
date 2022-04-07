@@ -6,7 +6,7 @@
 
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_rgw
-
+// https://docs.ceph.com/en/latest/radosgw/opa/
 int rgw_opa_authorize(RGWOp *& op,
                       req_state * const s)
 {

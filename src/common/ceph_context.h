@@ -200,6 +200,7 @@ public:
       if (drop_on_fork) {
 	associated_objs_drop_on_fork.insert(std::string(name));
       }
+      // https://en.cppreference.com/w/cpp/container/map/emplace_hint
       i = associated_objs.emplace_hint(
 	i,
 	std::piecewise_construct,

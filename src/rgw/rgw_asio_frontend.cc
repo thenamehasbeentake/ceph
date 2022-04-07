@@ -179,6 +179,7 @@ void handle_connection(boost::asio::io_context& context,
   // limit header to 4k, since we read it all into a single flat_buffer
   static constexpr size_t header_limit = 4096;
   // don't impose a limit on the body, since we read it in pieces
+  // size_t 8个字节
   static constexpr size_t body_limit = std::numeric_limits<size_t>::max();
 
   auto cct = env.store->ctx();

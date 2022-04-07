@@ -115,6 +115,7 @@ struct generic_attr {
 /*
  * mapping between http env fields and rgw object attrs
  */
+// http环境变量 -> rgw对象属性
 static const struct generic_attr generic_attrs[] = {
   { "CONTENT_TYPE",             RGW_ATTR_CONTENT_TYPE },
   { "HTTP_CONTENT_LANGUAGE",    RGW_ATTR_CONTENT_LANG },
@@ -1820,7 +1821,7 @@ int RGWHandler_REST::validate_object_name(const string& object)
   }
   return 0;
 }
-
+// s3操作方法
 static http_op op_from_method(const char *method)
 {
   if (!method)
@@ -2019,7 +2020,7 @@ int RGWREST::preprocess(struct req_state *s, rgw::io::BasicClient* cio)
   s->info.request_uri_aws4 = s->info.request_uri;
 
   s->cio = cio;
-
+// 配置文件里面rgw支持的功能
   // We need to know if this RGW instance is running the s3website API with a
   // higher priority than regular S3 API, or possibly in place of the regular
   // S3 API.
@@ -2195,6 +2196,7 @@ int RGWREST::preprocess(struct req_state *s, rgw::io::BasicClient* cio)
    * nginx/lighttpd/apache setting BOTH headers. As a result, we have to check
    * both headers and can't always simply pick A or B.
    */
+// http 请求头转换为rgw的attr
   const char* content_length = info.env->get("CONTENT_LENGTH");
   const char* http_content_length = info.env->get("HTTP_CONTENT_LENGTH");
   if (!http_content_length != !content_length) {
@@ -2249,7 +2251,9 @@ int RGWREST::preprocess(struct req_state *s, rgw::io::BasicClient* cio)
     ldpp_dout(s, 10) << "negative content length, aborting" << dendl;
     return -EINVAL;
   }
-
+// 其他attrs,content_type, content_language...
+// src/rgw/rgw_common.h, RGW_ATTR_*
+// generic_attrs
   map<string, string>::iterator giter;
   for (giter = generic_attrs_map.begin(); giter != generic_attrs_map.end();
        ++giter) {

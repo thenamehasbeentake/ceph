@@ -1344,7 +1344,7 @@ int RGWRados::init_complete(const DoutPrefixProvider *dpp)
 
   return ret;
 }
-
+// 初始化服务
 int RGWRados::init_svc(bool raw, const DoutPrefixProvider *dpp)
 {
   if (raw) {
@@ -1366,7 +1366,7 @@ int RGWRados::init_ctl(const DoutPrefixProvider *dpp)
 int RGWRados::initialize(const DoutPrefixProvider *dpp)
 {
   int ret;
-
+  // 超时
   inject_notify_timeout_probability =
     cct->_conf.get_val<double>("rgw_inject_notify_timeout_probability");
   max_notify_retries = cct->_conf.get_val<uint64_t>("rgw_max_notify_retries");

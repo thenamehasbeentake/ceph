@@ -386,7 +386,7 @@ struct str_len meta_prefixes[] = { STR_LEN_ENTRY("HTTP_X_AMZ"),
                                    STR_LEN_ENTRY("HTTP_X_CONTAINER"),
                                    STR_LEN_ENTRY("HTTP_X_ACCOUNT"),
                                    {NULL, 0} };
-
+// 初始化meta_info到x_meta_map
 void req_info::init_meta_info(const DoutPrefixProvider *dpp, bool *found_bad_meta)
 {
   x_meta_map.clear();
@@ -402,11 +402,12 @@ void req_info::init_meta_info(const DoutPrefixProvider *dpp, bool *found_bad_met
         ldpp_dout(dpp, 10) << "meta>> " << p << dendl;
         const char *name = p+len; /* skip the prefix */
         int name_len = header_name.size() - len;
-
+        // HTTP_X_ACCOUNT_META_.*     ->    bad meta  ???
         if (found_bad_meta && strncmp(name, "_META_", name_len) == 0)
           *found_bad_meta = true;
 
         char name_low[meta_prefixes[0].len + name_len + 1];
+        // X_ACCOUNT_META_NAME
         snprintf(name_low, meta_prefixes[0].len - 5 + name_len + 1, "%s%s", meta_prefixes[0].str + 5 /* skip HTTP_ */, name); // normalize meta prefix
         int j;
         for (j = 0; name_low[j]; j++) {
@@ -416,10 +417,11 @@ void req_info::init_meta_info(const DoutPrefixProvider *dpp, bool *found_bad_met
             name_low[j] = '-';
         }
         name_low[j] = 0;
-
+        // 发现相同的key，在第一个value之后加，再在其后追加新的value
         auto it = x_meta_map.find(name_low);
         if (it != x_meta_map.end()) {
           string old = it->second;
+          // 从字符中去除所有的尾随空格
           boost::algorithm::trim_right(old);
           old.append(",");
           old.append(val);

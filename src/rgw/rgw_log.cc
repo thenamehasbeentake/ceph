@@ -130,6 +130,7 @@ public:
   }
 
   void recalc_round_timestamp(utime_t& ts) {
+    // 使用ts初始化了round_timesteamp???   round_to_hour取消小时以下分秒时间
     round_timestamp = ts.round_to_hour();
   }
 

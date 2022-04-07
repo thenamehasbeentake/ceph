@@ -283,7 +283,7 @@ int radosgw_Main(int argc, const char **argv)
   } else {
     dout(1) << __func__ << " not setting numa affinity" << dendl;
   }
-
+// 后续理清楚region、zonegroup、period、realm、 zone 关系 
   // maintain existing region root pool for new multisite objects
   if (!g_conf()->rgw_region_root_pool.empty()) {
     const char *root_pool = g_conf()->rgw_region_root_pool.c_str();
@@ -304,12 +304,14 @@ int radosgw_Main(int argc, const char **argv)
   }
 
   if (g_conf()->daemonize) {
+    // g_ceph_context 在src/global/global_context.cc定义，在头文件 extern
     global_init_daemonize(g_ceph_context);
   }
   ceph::mutex mutex = ceph::make_mutex("main");
   SafeTimer init_timer(g_ceph_context, mutex);
   init_timer.init();
   mutex.lock();
+  // rgw初始化计时开始，超时打日志并退出
   init_timer.add_event_after(g_conf()->rgw_init_timeout, new C_InitTimeout);
   mutex.unlock();
 
@@ -318,8 +320,10 @@ int radosgw_Main(int argc, const char **argv)
   common_init_finish(g_ceph_context);
 
   init_async_signal_handler();
+  // 注册异步信号处理函数，捕获到信号，发送广播
   register_async_signal_handler(SIGHUP, sighup_handler);
 
+  // ???
   TracepointProvider::initialize<rgw_rados_tracepoint_traits>(g_ceph_context);
   TracepointProvider::initialize<rgw_op_tracepoint_traits>(g_ceph_context);
 
@@ -328,7 +332,7 @@ int radosgw_Main(int argc, const char **argv)
     derr << "ERROR: unable to initialize rgw tools" << dendl;
     return -r;
   }
-
+  // 初始化DNS解析器
   rgw_init_resolver();
   rgw::curl::setup_curl(fe_map);
   rgw_http_client_init(g_ceph_context);
@@ -339,6 +343,7 @@ int radosgw_Main(int argc, const char **argv)
 #endif
 
   const DoutPrefix dp(cct.get(), dout_subsys, "rgw main: ");
+  // 初始化rados
   rgw::sal::RGWRadosStore *store =
     RGWStoreManager::get_storage(&dp, g_ceph_context,
 				 g_conf()->rgw_enable_gc_threads,
@@ -356,12 +361,13 @@ int radosgw_Main(int argc, const char **argv)
     derr << "Couldn't init storage provider (RADOS)" << dendl;
     return EIO;
   }
+  // 性能监控
   r = rgw_perf_start(g_ceph_context);
   if (r < 0) {
     derr << "ERROR: failed starting rgw perf" << dendl;
     return -r;
   }
-
+  // rest api ？ 初始化。http与rgw互相映射，
   rgw_rest_init(g_ceph_context, store->svc()->zone->get_zonegroup());
 
   mutex.lock();
@@ -374,9 +380,9 @@ int radosgw_Main(int argc, const char **argv)
   RGWREST rest;
 
   list<string> apis;
-
+  // 从配置文件中获取apis
   get_str_list(g_conf()->rgw_enable_apis, apis);
-
+  // 处理配置文件
   map<string, bool> apis_map;
   for (list<string>::iterator li = apis.begin(); li != apis.end(); ++li) {
     apis_map[*li] = true;
@@ -387,8 +393,9 @@ int radosgw_Main(int argc, const char **argv)
 	g_ceph_context->_conf->rgw_keystone_admin_password.empty())) {
     dout(0) << "WARNING: rgw_keystone_admin_token and rgw_keystone_admin_password should be avoided as they can expose secrets.  Prefer the new rgw_keystone_admin_token_path and rgw_keystone_admin_password_path options, which read their secrets from files." << dendl;
   }
-
+// 根据配置文件中支持api，初始化RGWRESTMgr_S3 / RGWRESTMgr_SWIFT /
   // S3 website mode is a specialization of S3
+  // s3website 需要了解
   const bool s3website_enabled = apis_map.count("s3website") > 0;
   const bool sts_enabled = apis_map.count("sts") > 0;
   const bool iam_enabled = apis_map.count("iam") > 0;
@@ -490,6 +497,7 @@ int radosgw_Main(int argc, const char **argv)
 
   /* Initialize the registry of auth strategies which will coordinate
    * the dynamic reconfiguration. */
+  // Tenants 租户
   rgw::auth::ImplicitTenants implicit_tenant_context{g_conf()};
   g_conf().add_observer(&implicit_tenant_context);
   auto auth_registry = \
@@ -507,7 +515,7 @@ int radosgw_Main(int argc, const char **argv)
   }
 
   rgw::dmclock::SchedulerCtx sched_ctx{cct.get()};
-
+  // olog->add_sink 加入sink列表，调用log函数会遍历列表调用列表指针的log函数
   OpsLogManifold *olog = new OpsLogManifold();
   if (!g_conf()->rgw_ops_log_socket_path.empty()) {
     OpsLogSocket* olog_socket = new OpsLogSocket(g_ceph_context, g_conf()->rgw_ops_log_data_backlog);
@@ -537,7 +545,7 @@ int radosgw_Main(int argc, const char **argv)
   service_map_meta["pid"] = stringify(getpid());
 
   list<RGWFrontend *> fes;
-
+  // 获取rgw_frontend_defaults, 要看看获取到的是什么
   string frontend_defs_str = g_conf().get_val<string>("rgw_frontend_defaults");
 
   list<string> frontends_def;
@@ -557,7 +565,7 @@ int radosgw_Main(int argc, const char **argv)
   }
 
   int fe_count = 0;
-
+  // 根据配置文件来初始化多个RGWFrontend到list<RGWFrontend *> fes中
   for (multimap<string, RGWFrontendConfig *>::iterator fiter = fe_map.begin();
        fiter != fe_map.end(); ++fiter, ++fe_count) {
     RGWFrontendConfig *config = fiter->second;
@@ -635,7 +643,7 @@ int radosgw_Main(int argc, const char **argv)
 
     fes.push_back(fe);
   }
-
+  // 注册到rados中
   r = store->getRados()->register_to_service_map("rgw", service_map_meta);
   if (r < 0) {
     derr << "ERROR: failed to register to service map: " << cpp_strerror(-r) << dendl;
@@ -643,7 +651,7 @@ int radosgw_Main(int argc, const char **argv)
     /* ignore error */
   }
 
-
+  // 监听realm period 更新
   // add a watcher to respond to realm configuration changes
   RGWPeriodPusher pusher(&dp, store, null_yield);
   RGWFrontendPauser pauser(fes, implicit_tenant_context, &pusher);
@@ -659,7 +667,7 @@ int radosgw_Main(int argc, const char **argv)
     cerr << "warning: unable to set dumpable flag: " << cpp_strerror(errno) << std::endl;
   }
 #endif
-
+  // 启动完成，等待结束
   wait_shutdown();
 
   derr << "shutting down" << dendl;

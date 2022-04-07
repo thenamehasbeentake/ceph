@@ -5,7 +5,7 @@
 #define CEPH_RGW_KMIP_CLIENT_H
 
 class RGWKMIPManager;
-
+// https://docs.ceph.com/en/latest/radosgw/kmip/
 class RGWKMIPTransceiver {
 public:
   enum kmip_operation {

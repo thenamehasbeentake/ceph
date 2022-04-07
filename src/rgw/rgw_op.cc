@@ -1322,7 +1322,7 @@ int RGWOp::init_quota()
       return r;
     user = &owner_user;
   }
-
+// bucket本身、用户在bucket的quota
   if (s->bucket->get_info().quota.enabled) {
     bucket_quota = s->bucket->get_info().quota;
   } else if (user->get_info().bucket_quota.enabled) {
@@ -1330,7 +1330,7 @@ int RGWOp::init_quota()
   } else {
     bucket_quota = store->svc()->quota->get_bucket_quota();
   }
-
+// 用户的quota
   if (user->get_info().user_quota.enabled) {
     user_quota = user->get_info().user_quota;
   } else {
