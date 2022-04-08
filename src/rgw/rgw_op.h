@@ -590,7 +590,7 @@ inline ostream& operator<<(ostream& out, const RGWBulkDelete::acct_path_t &o) {
   return out << o.bucket_name << "/" << o.obj_key;
 }
 
-
+// one part of the bulk delete(RGWDeleteMultiObj_ObjStore_S3)
 class RGWBulkUploadOp : public RGWOp {
   boost::optional<RGWSysObjectCtx> dir_ctx;
 

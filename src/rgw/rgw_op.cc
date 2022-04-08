@@ -107,6 +107,7 @@ int RGWGetObj::parse_range(void)
   partial_content = false;
 
   size_t pos = rs.find("bytes=");
+  // 处理bytes = 之间有空格的情况
   if (pos == string::npos) {
     pos = 0;
     while (isspace(rs[pos]))
@@ -129,7 +130,7 @@ int RGWGetObj::parse_range(void)
     goto done;
 
   partial_content = true;
-
+// ofs起始，end结束
   ofs_str = rs.substr(0, pos);
   end_str = rs.substr(pos + 1);
   if (end_str.length()) {
@@ -141,6 +142,7 @@ int RGWGetObj::parse_range(void)
   if (ofs_str.length()) {
     ofs = atoll(ofs_str.c_str());
   } else { // RFC2616 suffix-byte-range-spec
+  // https://www.ietf.org/rfc/rfc2616.txt
     ofs = -end;
     end = -1;
   }
