@@ -15,7 +15,8 @@
 
 // Copied from KernelDevice with HM-SMR specific functionality added.  Will be
 // further specialized for HM-SMR.
-
+// https://zh.wikipedia.org/wiki/%E5%8F%A0%E7%93%A6%E7%A3%81%E8%AE%B0%E5%BD%95
+// 由主机管理（host managed）     叠瓦磁记录（英語：Shingled magnetic recording，SMR，直译为分层磁记录）
 #ifndef CEPH_BLK_HMSMRDEVICE_H
 #define CEPH_BLK_HMSMRDEVICE_H
 

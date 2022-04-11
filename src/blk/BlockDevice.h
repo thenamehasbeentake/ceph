@@ -45,6 +45,7 @@
 #endif
 // These values match Linux definition
 // https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/fcntl.h#n56
+// ????
 #define  WRITE_LIFE_NOT_SET  	0 	// No hint information set
 #define  WRITE_LIFE_NONE  	1       // No hints about write life time
 #define  WRITE_LIFE_SHORT  	2       // Data written has a short life time
@@ -98,6 +99,7 @@ public:
   IOContext &operator=(const IOContext& other) = delete;
 
   bool has_pending_aios() {
+    // https://en.cppreference.com/w/cpp/atomic/atomic/load
     return num_pending.load();
   }
   void release_running_aios();
@@ -108,12 +110,17 @@ public:
     assert(num_running >= 1);
 
     std::lock_guard l(lock);
+    // https://en.cppreference.com/w/cpp/atomic/atomic/fetch_sub
+    //  read-modify-write operation
+    // https://stackoverflow.com/questions/28652236/is-fetch-sub-really-atomic  多线程下atomic的问题
+    // 为什么要-1?
     if (num_running.fetch_sub(1) == 1) {
 
       // we might have some pending IOs submitted after the check
       // as there is no lock protection for aio_submit.
       // Hence we might have false conditional trigger.
       // aio_wait has to handle that hence do not care here.
+      // aio_submit没有锁的保护，这个地方可能会有io在条件判断之后加入，但是不用管
       cond.notify_all();
     }
   }
