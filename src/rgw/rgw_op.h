@@ -912,6 +912,7 @@ protected:
 
   int shard_id;
 
+  bool tag_redirect;
   int parse_max_keys();
 
 public:

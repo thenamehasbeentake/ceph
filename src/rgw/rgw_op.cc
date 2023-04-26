@@ -2855,8 +2855,13 @@ int RGWListBucket::verify_permission(optional_yield y)
   s->env.emplace("s3:max-keys", std::to_string(max));
 
   auto [has_s3_existing_tag, has_s3_resource_tag] = rgw_check_policy_condition(this, s, false);
-  if (has_s3_resource_tag)
-    rgw_iam_add_buckettags(this, s);
+
+  // tag redirect
+  // TODO: store persistent like tag
+  tag_redirect = true;
+  if (!verify_bucket_permission(this, s, rgw::IAM::s3GetBucketTagging)) {
+    tag_redirect = false;
+  }
 
   if (!verify_bucket_permission(this,
                                 s,
@@ -2913,6 +2918,31 @@ void RGWListBucket::execute(optional_yield y)
   params.shard_id = shard_id;
 
   rgw::sal::Bucket::ListResults results;
+  // get bucket tag
+  if (tag_redirect && prefix.size() != 0) {
+    // prefix = tag
+    auto iter = s->bucket_attrs.find(RGW_ATTR_TAGS);
+    if (iter != s->bucket_attrs.end()) {
+      auto taglist = iter.second();
+
+      RGWObjTagSet_S3 tagset;
+      auto citer = taglist.cbegin();
+      try {
+        tagset.decode(citer);
+      } catch (buffer::error& err) {
+        ldpp_dout(this,0) << "ERROR: caught buffer::error, couldn't decode TagSet" << dendl;
+        // op_ret= -EIO;
+        // return;
+      }
+      auto tagsmap = tagset.get_tags();
+      for (auto tag : tagsmap) {
+        if (tag.first == prefix) {
+          prefix = tag.second;
+          break;
+        }
+      }
+    }
+  }
 
   op_ret = s->bucket->list(this, params, max, results, y);
   if (op_ret >= 0) {
