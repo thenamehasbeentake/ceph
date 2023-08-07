@@ -348,6 +348,7 @@ class PgAutoscaler(MgrModule):
               Set[int]]:
 
         # We identify subtrees and overlapping roots from osdmap
+        # ceph osd pool ls detail --format json-pretty
         for pool_id, pool in osdmap.get_pools().items():
             crush_rule = crush.get_rule_by_id(pool['crush_rule'])
             assert crush_rule is not None
@@ -378,6 +379,7 @@ class PgAutoscaler(MgrModule):
             s.osds |= osds
             s.pool_ids.append(pool_id)
             s.pool_names.append(pool['pool_name'])
+            # 当前的pg num 乘以 副本数
             s.pg_current += pool['pg_num_target'] * pool['size']
             target_ratio = pool['options'].get('target_size_ratio', 0.0)
             if target_ratio:
@@ -404,6 +406,7 @@ class PgAutoscaler(MgrModule):
         # identify subtrees and overlapping roots
         roots, overlapped_roots = self.identify_subtrees_and_overlaps(osdmap,
                                                                       crush, result, overlapped_roots, roots)
+        #   ceph osd status smb-test-1-a2af9aa3-94bf-46bc-a2ab-159e42b3d6a2 --format json-pretty
         # finish subtrees
         all_stats = self.get('osd_stats')
         for s in roots:
@@ -420,7 +423,9 @@ class PgAutoscaler(MgrModule):
                     # on the physical storage available, not how it is
                     # reweighted right now.
                     capacity += osd_stats['kb'] * 1024
+                    self.log.info("osd stats_kb %s, osd_id %s", osd_stats['kb'], osd_stats['osd'])
 
+            
             s.capacity = capacity
             self.log.debug('root_ids %s pools %s with %d osds, pg_target %d',
                            s.root_ids,

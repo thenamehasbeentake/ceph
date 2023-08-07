@@ -282,6 +282,33 @@ class CRUSHMap(ceph_module.BasePyCRUSH):
         return None
 
     def get_rule_root(self, rule_name: str) -> Optional[int]:
+    #root@b4efa3b7d0ab:/ceph/build# ./bin/ceph osd crush rule dump
+    # *** DEVELOPER MODE: setting PATH, PYTHONPATH and LD_LIBRARY_PATH ***
+    # 2023-08-04T09:09:43.197+0000 7f11ed9ba640 -1 WARNING: all dangerous and experimental features are enabled.
+    # 2023-08-04T09:09:43.201+0000 7f11ed9ba640 -1 WARNING: all dangerous and experimental features are enabled.
+    # [
+    #     {
+    #         "rule_id": 0,
+    #         "rule_name": "replicated_rule",
+    #         "type": 1,
+    #         "steps": [
+    #             {
+    #                 "op": "take",
+    #                 "item": -1,
+    #                 "item_name": "default"
+    #             },
+    #             {
+    #                 "op": "choose_firstn",
+    #                 "num": 0,
+    #                 "type": "osd"
+    #             },
+    #             {
+    #                 "op": "emit"
+    #             }
+    #         ]
+    #     }
+    # ]
+
         rule = self.get_rule(rule_name)
         if rule is None:
             return None
@@ -296,6 +323,26 @@ class CRUSHMap(ceph_module.BasePyCRUSH):
             return first_take['item']
 
     def get_osds_under(self, root_id: int) -> List[int]:
+        # root@b4efa3b7d0ab:/ceph/build# ./bin/ceph osd crush dump
+        # 从crush_root, -1 开始遍历，找到"devices":
+        # "buckets": [
+        #     {
+        #         "id": -1,
+        #         "name": "default",
+        #         "type_id": 11,
+        #         "type_name": "root",
+        #         "weight": 6461,
+        #         "alg": "straw2",
+        #         "hash": "rjenkins1",
+        #         "items": [
+        #             {
+        #                 "id": -3,
+        #                 "weight": 6461,
+        #                 "pos": 0
+        #             }
+        #         ]
+        #     },
+
         # TODO don't abuse dump like this
         d = self.dump()
         buckets = dict([(b['id'], b) for b in d['buckets']])
@@ -313,7 +360,7 @@ class CRUSHMap(ceph_module.BasePyCRUSH):
                         pass
 
         accumulate(buckets[root_id])
-
+        # osd 在"devices": [ 中的id
         return osd_list
 
     def device_class_counts(self) -> Dict[str, int]:

@@ -2653,16 +2653,21 @@ void DaemonServer::send_report()
 void DaemonServer::adjust_pgs()
 {
   dout(20) << dendl;
+  // 默认1024个，集群最多1024个pg
   unsigned max = std::max<int64_t>(1, g_conf()->mon_osd_max_creating_pgs);
+  // 默认0.05
   double max_misplaced = g_conf().get_val<double>("target_max_misplaced_ratio");
   bool aggro = g_conf().get_val<bool>("mgr_debug_aggressive_pg_num_changes");
 
   map<string,unsigned> pg_num_to_set;
   map<string,unsigned> pgp_num_to_set;
   set<pg_t> upmaps_to_clear;
+  // 从osdmap和pgmap中抓取数据，怎么拿到的呢？
   cluster_state.with_osdmap_and_pgmap([&](const OSDMap& osdmap, const PGMap& pg_map) {
       unsigned creating_or_unknown = 0;
+      // stat->pg map
       for (auto& i : pg_map.num_pg_by_state) {
+        // creating/unknown状态的pg, 为什么要用0而不是UNKNOWN的宏？
 	if ((i.first & (PG_STATE_CREATING)) ||
 	    i.first == 0) {
 	  creating_or_unknown += i.second;
@@ -2672,6 +2677,7 @@ void DaemonServer::adjust_pgs()
       if (creating_or_unknown >= max) {
 	return;
       }
+      // 剩余可用的pg
       left -= creating_or_unknown;
       dout(10) << "creating_or_unknown " << creating_or_unknown
 	       << " max_creating " << max
@@ -2683,6 +2689,7 @@ void DaemonServer::adjust_pgs()
       // may make multiple adjustments with stale informaiton.
       double misplaced_ratio, degraded_ratio;
       double inactive_pgs_ratio, unknown_pgs_ratio;
+      // 从pgmap中获取pg的状态
       pg_map.get_recovery_stats(&misplaced_ratio, &degraded_ratio,
 				&inactive_pgs_ratio, &unknown_pgs_ratio);
       dout(20) << "misplaced_ratio " << misplaced_ratio
@@ -2691,11 +2698,12 @@ void DaemonServer::adjust_pgs()
 	       << " unknown_pgs_ratio " << unknown_pgs_ratio
 	       << "; target_max_misplaced_ratio " << max_misplaced
 	       << dendl;
-
+      // mempool::osdmap::map<int64_t,pg_pool_t>
       for (auto& i : osdmap.get_pools()) {
 	const pg_pool_t& p = i.second;
 
 	// adjust pg_num?
+  // ceph osd dump --format json-pretty
 	if (p.get_pg_num_target() != p.get_pg_num()) {
 	  dout(20) << "pool " << i.first
 		   << " pg_num " << p.get_pg_num()
@@ -2732,6 +2740,19 @@ void DaemonServer::adjust_pgs()
 	    vector<int32_t> source_acting;
             for (auto &merge_participant : {merge_source, merge_target}) {
               bool is_merge_source = merge_participant == merge_source;
+    //              "pg_upmap": [],
+    // "pg_upmap_items": [
+    //     {
+    //         "pgid": "9.a",
+    //         "mappings": [
+    //             {
+    //                 "from": 5,
+    //                 "to": 4
+    //             }
+    //         ]
+    //     }
+    // ],
+
               if (osdmap.have_pg_upmaps(merge_participant)) {
                 dout(10) << "pool " << i.first
                          << " pg_num_target " << p.get_pg_num_target()

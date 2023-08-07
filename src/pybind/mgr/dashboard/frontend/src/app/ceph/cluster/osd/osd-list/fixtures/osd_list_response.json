@@ -43,6 +43,7 @@
     "heartbeat_front_addr": "192.168.2.106:6807/9066",
     "id": 0,
     "osd_stats": {
+      // kb = kb_used + kb_avail
       "osd": 0,
       "up_from": 8,
       "seq": 34359740004,
@@ -50,6 +51,7 @@
       "num_osds": 1,
       "num_per_pool_osds": 1,
       "num_per_pool_omap_osds": 1,
+        // total = kb
       "kb": 105906168,
       "kb_used": 2099028,
       "kb_used_data": 1876,
@@ -57,6 +59,8 @@
       "kb_used_meta": 1048576,
       "kb_avail": 103807140,
       "statfs": {
+        // total = available + internally_reserved + allocated + internal_metadata
+        // no data_stored ?
         "total": 108447916032,
         "available": 106298511360,
         "internally_reserved": 1073741824,
